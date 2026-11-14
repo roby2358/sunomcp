@@ -17,6 +17,8 @@ Add new findings to the matching section, short and dated. Mark anything unverif
 - Draft lyrics in chat first; generate only when the user asks.
 - Always pass `model: "v6-wild"` for songs. Speech has no model choice.
 - Each generation call returns two takes: wait on both ids with `audio-wait` and report both links.
+- Telling takes apart: the two takes of a pair share a timestamp, so identify them by length (for example "the 6:09 one"). Report each take's duration with its link once it completes; if "the last one" is ambiguous, check which is liked, then go by length.
+- Rename with `audio-edit` (title); publish with `audio-settings`.
 - For lyric polish, hand the draft to a review agent for flow and rhyme, then show the revision and what changed.
 
 ## Lyrics
@@ -27,6 +29,9 @@ Add new findings to the matching section, short and dated. Mark anything unverif
 - Spoken lines: tag `[spoken]`, never `(spoken)`, since parentheses can get sung as backing vocals. Rendering is spotty, but keep using them.
 - Production notes: lines starting with `*` at the top, before the first section tag.
 - Rhymes land heavily: the rhyme word ends the line, carries the final stress, and is a full rhyme where possible. Put the joke on it.
+- Slant rhymes count: don't rewrite a good line just to force a full rhyme, and tell review agents the same.
+- Lyrics are not poetry: keep them raw, direct, repeated, refrained. Johnny Cash's advice (*American Songwriter*): "write as clearly and plainly as you can," keep the title evident in the song, and convey the feeling in a simple, honest, straightforward way.
+- Let the feeling overload the form (Brian Eno, *A Year with Swollen Appendices*): "The distorted guitar sound is the sound of something too loud for the medium supposed to carry it. The blues singer with the cracked voice is the sound of an emotional cry too powerful for the throat that releases it." The excitement is in "events too momentous for the medium assigned to record them." (Quoted from memory.)
 - Flow: matching beat counts within a couplet, no stress pile-ups, no words that fight the meter (for example "productivity", "couture").
 
 ## Lyric-writing prompts
