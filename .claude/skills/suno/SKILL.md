@@ -37,6 +37,7 @@ Add new findings to the matching section, short and dated. Mark anything unverif
 ## Lyric-writing prompts
 
 - Breathless sublation (user favorite, 2026-11-14): "In a swaying sing-song voice, where one idea flows naturally into the next with no breathing stops, write a song in 4 verses a bridge and a chorus about the sublation of <ideas>. No thinking! Belt it out!" Fill `<ideas>` with the pair to sublate (first use: big bang and singularity, giving "Cancelled and Kept").
+- Operatic saptabhangi (user favorite, 2026-11-16): "Run the saptabhangi (the Jain sevenfold predication) on '<flat declaration>', then write it as a dramatic opera in seven verses, one per predication in order: it is; it is not; it is and is not, in turn; it can't be said; it is, and can't be said; it is not, and can't be said; all three at once. Omit the Sanskrit. Interpose a chorus that carries the 'in a way'." Keep verses to four lines so seven fit. First use: "Everything is breaking", giving "Everything Is Breaking", with a prima donna, full choir and orchestral electronica style. More operatic takes blur the words; "clear diction" leans toward clarity.
 - Zoom-out (Claude's idea, untested): "With total conviction and a straight face, write a song in 4 verses a bridge and a chorus about <small everyday mishap>. Each verse retells it one scale larger: the home, the city, the planet, the cosmos. The chorus never changes a word, yet means something bigger each time it returns. The bridge is the one moment of doubt. Heavy rhymes, no winking!"
 
 ## Style prompts
