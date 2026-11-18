@@ -4,6 +4,15 @@ r"""Scan a Suno lyric sheet for meter: syllables, stresses, clashes, rhymes.
 Usage:  python3 meter.py lyrics.txt        (or pipe the sheet on stdin)
         python3 meter.py --meter trochaic4 lyrics.txt
 
+        python3 meter.py --rhymes kindness --stress /x
+
+With --rhymes WORD it lists words that rhyme with WORD instead of scanning a
+sheet: full rhymes (same sounds from the last stressed vowel on), then slant
+rhymes (same vowels and closing sound, other consonants), grouped by stress
+pattern, commonest words first. --stress keeps only words with that pattern ("/x" for KIND-ness),
+so the list holds words that both rhyme and fit the beat. Pick the rhyme word
+first and write the line toward it.
+
 With --meter (trochaic, iambic, dactylic or anapestic, plus an optional
 number of beats per line: "trochaic4" or "trochaic tetrameter") each line is
 fitted to that beat grid instead of being searched for clashes. One-syllable
@@ -23,10 +32,13 @@ import itertools
 import os
 import re
 import sys
+import textwrap
 import urllib.request
 
 DICT_URL = "https://raw.githubusercontent.com/cmusphinx/cmudict/master/cmudict.dict"
 DICT_PATH = os.path.expanduser("~/.cache/suno-meter/cmudict.dict")
+FREQ_URL = "https://norvig.com/ngrams/count_1w.txt"
+FREQ_PATH = os.path.expanduser("~/.cache/suno-meter/count_1w.txt")
 
 WEAK = set("""a an the and or but nor so if as at by for from in into of on onto to up with than that
 i me my you your he him his she her it its we us our they them their is am are was were be been
@@ -209,6 +221,76 @@ def scan_line(line, prons, meter=None, feet=None):
             "flags": flags, "rhyme": rhyme_part(last_phones)}
 
 
+def load_freq():
+    """Word counts for ranking, downloaded once; empty if unavailable."""
+    try:
+        if not os.path.exists(FREQ_PATH):
+            os.makedirs(os.path.dirname(FREQ_PATH), exist_ok=True)
+            sys.stderr.write("Downloading a word-frequency list (once)...\n")
+            urllib.request.urlretrieve(FREQ_URL, FREQ_PATH)
+        with open(FREQ_PATH, encoding="utf-8") as f:
+            return {w: int(c) for w, c in (line.split() for line in f if line.strip())}
+    except (OSError, ValueError):
+        sys.stderr.write("No word-frequency list: showing rhymes alphabetically.\n")
+        return {}
+
+
+def find_rhymes(word, prons, stress=None, limit=20):
+    key = word.lower().strip("'")
+    targets = {rhyme_part(ph)[0] for _, ph in word_variants(key, prons) if ph}
+    if not targets:
+        sys.exit("%r is not in the pronouncing dictionary." % word)
+    vowels = lambda tail: tuple(p for p in tail.split() if p[0] in "AEIOU")
+    slant_keys = {vowels(t) for t in targets}
+    def shared(tail):  # longest run of closing sounds in common with the target
+        best = 0
+        for t in targets:
+            a, b, n = tail.split()[::-1], t.split()[::-1], 0
+            while n < min(len(a), len(b)) and a[n] == b[n]:
+                n += 1
+            best = max(best, n)
+        return best
+    open_end = any(t.split()[-1][0] in "AEIOU" for t in targets)
+    close = {}
+    fits = lambda p: not stress or (len(p) == 1 == len(stress)) or \
+        stress in (p.replace("\\", "/"), p.replace("\\", "x"))
+    freq = load_freq()
+    full, slant = {}, {}
+    for w, variants in prons.items():
+        if w == key or not re.fullmatch(r"[a-z']+", w) or (freq and w not in freq):
+            continue
+        for phones in variants:
+            marks = [p[-1] for p in phones if p[-1].isdigit()]
+            if not marks:
+                continue
+            pattern = "/" if len(marks) == 1 else "".join({"0": "x", "1": "/", "2": "\\"}[s] for s in marks)
+            tail = rhyme_part(phones)[0]
+            if not fits(pattern):
+                continue
+            if tail in targets:
+                full.setdefault(w, pattern)
+            elif vowels(tail) in slant_keys and w not in full and (open_end or shared(tail)):
+                if shared(tail) > close.get(w, -1):
+                    slant[w], close[w] = pattern, shared(tail)
+    for w in full:
+        slant.pop(w, None)
+    print('Rhymes for "%s" (%s)%s, commonest first:' % (
+        word, " / ".join(sorted(targets)), " with stress " + stress if stress else ""))
+    for title, found in (("Full", full), ("Slant (same vowels, closest endings first)", slant)):
+        print("\n%s:" % title)
+        if not found:
+            print("  none")
+        groups = {}
+        for w in sorted(found, key=lambda w: (-close.get(w, 0) if found is slant else 0, -freq.get(w, 0), w)):
+            groups.setdefault(found[w], []).append(w)
+        for pattern in sorted(groups, key=lambda p: (len(p), p)):
+            words = groups[pattern]
+            more = "  (+%d more)" % (len(words) - limit) if len(words) > limit else ""
+            body = textwrap.fill(", ".join(words[:limit]) + more, 88,
+                                 initial_indent="  %-5s " % pattern, subsequent_indent=" " * 8)
+            print(body)
+
+
 def rhyme_scheme(lines):
     keys, letters = {}, []
     for ln in lines:
@@ -232,7 +314,21 @@ def main():
         print("  --meter NAME[N]  fit each line to a beat grid, N beats a line (optional)")
         print("                   meters: " + ", ".join(GRIDS))
         print("                   beat names: " + ", ".join("%smeter (%d)" % kv for kv in FEET.items()))
+        print("  --rhymes WORD    list rhymes for WORD instead of scanning a sheet")
+        print("  --stress PATTERN with --rhymes: keep words with this stress pattern, as in /x or x/x")
+        print("  --limit N        with --rhymes: words shown per stress pattern (default 20)")
         print("  -h, --help       show this help")
+        return
+    opts = {}
+    for name in ("--rhymes", "--stress", "--limit"):
+        if name in args:
+            i = args.index(name)
+            if i + 1 == len(args):
+                sys.exit("%s needs a value; see --help" % name)
+            opts[name] = args[i + 1]
+            del args[i:i + 2]
+    if "--rhymes" in opts:
+        find_rhymes(opts["--rhymes"], load_dict(), opts.get("--stress"), int(opts.get("--limit", 20)))
         return
     if "--meter" in args:
         i = args.index("--meter")
