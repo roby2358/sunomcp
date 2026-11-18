@@ -13,6 +13,9 @@ pattern, commonest words first. --stress keeps only words with that pattern ("/x
 so the list holds words that both rhyme and fit the beat. Pick the rhyme word
 first and write the line toward it.
 
+Add --md to either mode for Markdown output: headings and tables that a
+person, a review agent or a script can all read.
+
 With --meter (trochaic, iambic, dactylic or anapestic, plus an optional
 number of beats per line: "trochaic4" or "trochaic tetrameter") each line is
 fitted to that beat grid instead of being searched for clashes. One-syllable
@@ -235,7 +238,7 @@ def load_freq():
         return {}
 
 
-def find_rhymes(word, prons, stress=None, limit=20):
+def find_rhymes(word, prons, stress=None, limit=20, md=False):
     key = word.lower().strip("'")
     targets = {rhyme_part(ph)[0] for _, ph in word_variants(key, prons) if ph}
     if not targets:
@@ -274,18 +277,24 @@ def find_rhymes(word, prons, stress=None, limit=20):
                     slant[w], close[w] = pattern, shared(tail)
     for w in full:
         slant.pop(w, None)
-    print('Rhymes for "%s" (%s)%s, commonest first:' % (
-        word, " / ".join(sorted(targets)), " with stress " + stress if stress else ""))
+    head = 'Rhymes for "%s" (%s)%s, commonest first' % (
+        word, " / ".join(sorted(targets)), " with stress " + stress if stress else "")
+    print("# " + head if md else head + ":")
     for title, found in (("Full", full), ("Slant (same vowels, closest endings first)", slant)):
-        print("\n%s:" % title)
+        print("\n## %s\n" % title if md else "\n%s:" % title)
         if not found:
-            print("  none")
+            print("None." if md else "  none")
+        elif md:
+            print("| Stress | Words |\n|---|---|")
         groups = {}
         for w in sorted(found, key=lambda w: (-close.get(w, 0) if found is slant else 0, -freq.get(w, 0), w)):
             groups.setdefault(found[w], []).append(w)
         for pattern in sorted(groups, key=lambda p: (len(p), p)):
             words = groups[pattern]
             more = "  (+%d more)" % (len(words) - limit) if len(words) > limit else ""
+            if md:
+                print("| `%s` | %s%s |" % (pattern, ", ".join(words[:limit]), more))
+                continue
             body = textwrap.fill(", ".join(words[:limit]) + more, 88,
                                  initial_indent="  %-5s " % pattern, subsequent_indent=" " * 8)
             print(body)
@@ -308,6 +317,8 @@ def rhyme_scheme(lines):
 
 def main():
     args, meter, feet = sys.argv[1:], None, None
+    md = "--md" in args
+    args = [a for a in args if a != "--md"]
     if "-h" in args or "--help" in args:
         print(__doc__.strip())
         print("\nOptions:")
@@ -317,6 +328,7 @@ def main():
         print("  --rhymes WORD    list rhymes for WORD instead of scanning a sheet")
         print("  --stress PATTERN with --rhymes: keep words with this stress pattern, as in /x or x/x")
         print("  --limit N        with --rhymes: words shown per stress pattern (default 20)")
+        print("  --md             print the result as Markdown (headings and tables)")
         print("  -h, --help       show this help")
         return
     opts = {}
@@ -328,7 +340,7 @@ def main():
             opts[name] = args[i + 1]
             del args[i:i + 2]
     if "--rhymes" in opts:
-        find_rhymes(opts["--rhymes"], load_dict(), opts.get("--stress"), int(opts.get("--limit", 20)))
+        find_rhymes(opts["--rhymes"], load_dict(), opts.get("--stress"), int(opts.get("--limit", 20)), md)
         return
     if "--meter" in args:
         i = args.index("--meter")
@@ -342,10 +354,18 @@ def main():
     if meter and not feet:
         counts = [scan_line(l, prons, meter)["beats"] for _, lines in sections for l in lines]
         feet = max(set(counts), key=counts.count) if counts else None
-    if meter:
+    if md:
+        print("# Meter scan" + (": %s, %s beats a line" % (meter, feet) if meter else ""))
+    elif meter:
         print("Meter: %s, %s beats a line" % (meter, feet))
     scanned = [(name, [scan_line(l, prons, meter, feet) for l in lines]) for name, lines in sections]
-    for name, lines in scanned:
+    for name, lines in scanned if md else []:
+        print("\n## %s\n\nRhyme: `%s` (lower case = slant)\n" % (name, rhyme_scheme(lines)))
+        print("| Line | Syllables | Stress | Text | Flags |\n|---|---|---|---|---|")
+        for n, l in enumerate(lines, 1):
+            print("| %d | %d | `%s` | %s | %s |" % (
+                n, len(l["flat"]), l["grouped"], l["text"], "; ".join(l["flags"])))
+    for name, lines in [] if md else scanned:
         print("\n[%s]   rhyme: %s  (lower case = slant)" % (name, rhyme_scheme(lines)))
         width = max(len(l["grouped"]) for l in lines)
         for l in lines:
@@ -365,11 +385,16 @@ def main():
             rows = [(n, ls[i]) for n, ls in members if i < len(ls)]
             if len({r[1]["flat"] for r in rows}) > 1:
                 if not printed:
-                    print("\nMatching lines that scan differently:")
+                    print("\n## Matching lines that scan differently\n\n| Section | Line | Syllables | Beats | Text |"
+                          "\n|---|---|---|---|---|" if md else "\nMatching lines that scan differently:")
                     printed = True
-                print("  %s, line %d" % (base, i + 1))
+                if not md:
+                    print("  %s, line %d" % (base, i + 1))
                 for n, l in rows:
-                    print("    %-14s %2d  %-14s %s" % (n, len(l["flat"]), l["flat"], l["text"]))
+                    if md:
+                        print("| %s | %d | %d | `%s` | %s |" % (n, i + 1, len(l["flat"]), l["flat"], l["text"]))
+                    else:
+                        print("    %-14s %2d  %-14s %s" % (n, len(l["flat"]), l["flat"], l["text"]))
     if not printed:
         print("\nAll matching lines across repeated sections scan alike.")
 
