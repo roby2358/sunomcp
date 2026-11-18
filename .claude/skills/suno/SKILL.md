@@ -31,7 +31,7 @@ Add new findings to the matching section, short and dated. Mark anything unverif
 - Write the chorus out once; a bare `[Chorus]` repeats it. Write it out again only when the words change.
 - Structure: intersperse the chorus and instrumentals between verses, putting `[Chorus]` then `[Instrumental]` on consecutive lines. Default shape: verse, chorus, instrumental, ... verse, bridge, chorus, instrumental, final chorus. Variations are fine, but never leave out the `[Chorus]` / `[Instrumental]` breaks.
 - Spoken lines: tag `[spoken]`, never `(spoken)`, since parentheses can get sung as backing vocals. Rendering is spotty, but keep using them.
-- Production notes: lines starting with `*` at the top, before the first section tag.
+- Production notes: at the top, before the first section tag, each line starting with `*` and wrapped in curly braces: `{* verses low and close, choruses belted }`. Bare `*` lines sometimes got sung (user, 2026-11-18); the braces are the user's fix, untested so far. Suno documents no syntax for this, and third-party guides say a voiced cue belongs in the style instead, so keep repeating the notes' substance in the style prompt.
 - Rhymes land heavily: the rhyme word ends the line, carries the final stress, and is a full rhyme where possible. Put the joke on it.
 - Slant rhymes count: don't rewrite a good line just to force a full rhyme, and tell review agents the same.
 - Lyrics are not poetry: keep them raw, direct, repeated, refrained. Johnny Cash's advice (*American Songwriter*): "write as clearly and plainly as you can," keep the title evident in the song, and convey the feeling in a simple, honest, straightforward way.

@@ -149,7 +149,7 @@ def parse(text):
     sections, current = [], None
     for raw in text.splitlines():
         line = raw.strip()
-        if not line or line.startswith("*"):
+        if not line or line.startswith(("*", "{")):
             continue
         tag = re.fullmatch(r"\[(.+)\]", line)
         if tag:
